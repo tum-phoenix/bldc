@@ -68,6 +68,8 @@ void app_init(app_configuration *conf) {
 		break;
 
 	case APP_CUSTOM:
+        app_ppm_start();
+        app_i2c_init();
 #ifdef USE_APP_STEN
 		hw_stop_i2c();
 		app_sten_init();

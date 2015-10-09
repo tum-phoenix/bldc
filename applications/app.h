@@ -49,5 +49,6 @@ void app_nunchuk_update_output(chuck_data *data);
 // Custom apps
 void app_gurgalof_init(void);
 void app_sten_init(void);
+void app_i2c_init(void);
 
 #endif /* APP_H_ */
