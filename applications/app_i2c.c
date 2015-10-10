@@ -20,12 +20,39 @@
 #include "ch.h"
 #include "hal.h"
 #include "stm32f4xx_conf.h"
-#include "servo_dec.h"
+#include "stm32f4xx_i2c.h"
 #include "mcpwm.h"
 #include "hw.h"
-#include "timeout.h"
 
 #define HANDLE I2C2
+
+// ENUM for registers
+enum {
+    IDENTIFICATION = 0x00, // 0x23
+    FIRMWARE_MAJOR = 0x01,
+    FIRMWARE_MINOR = 0x02,
+    // 0x03 is reserved
+    
+    // Tachometer: 32bit signed integer (big endian) [ticks]
+    TACHOMETER_1 = 0x04,
+    TACHOMETER_2 = 0x05,
+    TACHOMETER_3 = 0x06,
+    TACHOMETER_4 = 0x07,
+    
+    // RPH: 32bit signed integer (big endian) [motor revolutions per hour]
+    RPH_1 = 0x08,
+    RPH_2 = 0x09,
+    RPH_3 = 0x10,
+    RPH_4 = 0x11,
+    
+    // TODO: motor current (directional/nondirectional?)/total current
+    
+    // Switching frequency: 16bit unsigned integer (big endian) [Hz]
+    SWITCHING_FREQUENCY_HI = 0x12,
+    SWITCHING_FREQUENCY_LO = 0x13,
+    
+    
+} i2c_slave_registers;
 
 typedef struct {
     size_t addr; //!< current memory address
@@ -61,10 +88,49 @@ void app_i2c_init(void) {
     nvicEnableVector(I2C2_ER_IRQn, STM32_CAN_CAN1_IRQ_PRIORITY+1); //! Interrupt prio 1 lower than CAN
 }
 
+uint8_t get_big_endian_byte_32(int32_t value, uint8_t byte)
+{
+    uint8_t* ptr = (uint8_t*)&value;
+    return ptr[sizeof(value) - (byte+1)];
+}
+
 uint8_t get_byte(uint8_t addr)
 {
     // TODO: actual data handling
     return addr + 10;
+    
+    
+    uint8_t value = 0x00;
+    switch(addr)
+    {
+        case IDENTIFICATION:
+            value = 0x23;
+            break;
+        case FIRMWARE_MAJOR:
+            value = FW_VERSION_MAJOR;
+            break;
+        case FIRMWARE_MINOR:
+            value = FW_VERSION_MINOR;
+            break;
+        case TACHOMETER_1:
+        case TACHOMETER_2:
+        case TACHOMETER_3:
+        case TACHOMETER_4:
+            value = get_big_endian_byte_32(mcpwm_get_tachometer_value(false), addr - TACHOMETER_1);
+            break;
+        case RPH_1:
+        case RPH_2:
+        case RPH_3:
+        case RPH_4:
+            value = get_big_endian_byte_32((int32_t)(60.0f * mcpwm_get_rpm()), addr - RPH_1);
+            break;
+        
+        default:
+            value = 0x0;
+            break;
+    }
+    
+    return value;
 }
 
 
@@ -86,14 +152,14 @@ CH_IRQ_HANDLER(I2C2_EV_IRQHandler) {
             break;
         case I2C_EVENT_SLAVE_TRANSMITTER_ADDRESS_MATCHED:
             // Adressed for reading, send current data
-        case I2C_EVENT_SLAVE_BYTE_TRANSMITTED;
+        case I2C_EVENT_SLAVE_BYTE_TRANSMITTED:
             // Master requests next byte
             
             // Both cases are effectively identical here
             
             I2C_SendData(HANDLE, get_byte(state.addr));
             // Increase address (for continuous reads)
-            state.addr++
+            state.addr++;
             break;
         case I2C_EVENT_SLAVE_STOP_DETECTED:
             // End communcation
