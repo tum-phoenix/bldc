@@ -90,7 +90,7 @@
 /*
  * Enable CAN-bus
  */
-#define CAN_ENABLE				1
+#define CAN_ENABLE				0
 
 /*
  * Settings for the external LEDs (hardcoded for now)
