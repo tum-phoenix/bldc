@@ -53,6 +53,7 @@ static volatile float amp_seconds;
 static volatile float amp_seconds_charged;
 static volatile float watt_seconds;
 static volatile float watt_seconds_charged;
+static volatile float position_set;
 
 // Private functions
 static void update_override_limits(volatile mc_configuration *conf);
@@ -79,6 +80,7 @@ void mc_interface_init(mc_configuration *configuration) {
 	amp_seconds_charged = 0.0;
 	watt_seconds = 0.0;
 	watt_seconds_charged = 0.0;
+	position_set = 0.0;
 
 	// Start threads
 	chThdCreateStatic(timer_thread_wa, sizeof(timer_thread_wa), NORMALPRIO, timer_thread, NULL);
@@ -285,6 +287,8 @@ void mc_interface_set_pid_pos(float pos) {
 	if (mc_interface_try_input()) {
 		return;
 	}
+
+	position_set = pos;
 
 	switch (conf.motor_type) {
 	case MOTOR_TYPE_BLDC:
@@ -632,7 +636,7 @@ float mc_interface_get_tot_current_in_filtered(void) {
 }
 
 int mc_interface_get_tachometer_value(bool reset) {
-	int ret = 0.0;
+	int ret = 0;
 
 	switch (conf.motor_type) {
 	case MOTOR_TYPE_BLDC:
@@ -652,7 +656,7 @@ int mc_interface_get_tachometer_value(bool reset) {
 }
 
 int mc_interface_get_tachometer_abs_value(bool reset) {
-	int ret = 0.0;
+	int ret = 0;
 
 	switch (conf.motor_type) {
 	case MOTOR_TYPE_BLDC:
@@ -662,6 +666,26 @@ int mc_interface_get_tachometer_abs_value(bool reset) {
 
 	case MOTOR_TYPE_FOC:
 		ret = mcpwm_foc_get_tachometer_abs_value(reset);
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+float mc_interface_get_last_inj_adc_isr_duration(void) {
+	float ret = 0.0;
+
+	switch (conf.motor_type) {
+	case MOTOR_TYPE_BLDC:
+	case MOTOR_TYPE_DC:
+		ret = mcpwm_get_last_inj_adc_isr_duration();
+		break;
+
+	case MOTOR_TYPE_FOC:
+		ret = mcpwm_foc_get_last_inj_adc_isr_duration();
 		break;
 
 	default:
@@ -683,6 +707,10 @@ float mc_interface_read_reset_avg_input_current(void) {
 	input_current_sum = 0;
 	input_current_iterations = 0;
 	return res;
+}
+
+float mc_interface_get_pos_set(void) {
+	return position_set;
 }
 
 // MC implementation functions
@@ -801,19 +829,7 @@ void mc_interface_mc_timer_isr(void) {
 	if (conf.motor_type == MOTOR_TYPE_FOC) {
 		// TODO: Make this more general
 		abs_current = mcpwm_foc_get_abs_motor_current();
-
-#define FILTER_SAMPLES 8
-		static float filter_buffer[FILTER_SAMPLES];
-		static int filter_ptr = 0;
-		filter_buffer[filter_ptr++] = abs_current;
-		if (filter_ptr >= FILTER_SAMPLES) {
-			filter_ptr = 0;
-		}
-		abs_current_filtered = 0.0;
-		for (int i = 0;i < FILTER_SAMPLES;i++) {
-			abs_current_filtered += filter_buffer[i];
-		}
-		abs_current_filtered /= (float)FILTER_SAMPLES;
+		abs_current_filtered = mcpwm_foc_get_abs_motor_current_filtered();
 	}
 
 	// Current fault code

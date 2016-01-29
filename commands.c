@@ -64,6 +64,8 @@ static float detect_low_duty;
 static int8_t detect_hall_table[8];
 static int detect_hall_res;
 static void(*send_func)(unsigned char *data, unsigned int len) = 0;
+static void(*appdata_func)(unsigned char *data, unsigned int len) = 0;
+static disp_pos_mode display_position_mode;
 
 void commands_init(void) {
 	chThdCreateStatic(detect_thread_wa, sizeof(detect_thread_wa), NORMALPRIO, detect_thread, NULL);
@@ -117,6 +119,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 	app_configuration appconf;
 	uint16_t flash_res;
 	uint32_t new_app_offset;
+	chuck_data chuck_d_tmp;
 
 	packet_id = data[0];
 	data++;
@@ -159,25 +162,26 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 	case COMM_GET_VALUES:
 		ind = 0;
 		send_buffer[ind++] = COMM_GET_VALUES;
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS1) * 10.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS2) * 10.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS3) * 10.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS4) * 10.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS5) * 10.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS6) * 10.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_PCB) * 10.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mc_interface_read_reset_avg_motor_current() * 100.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mc_interface_read_reset_avg_input_current() * 100.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)mc_interface_get_rpm(), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(GET_INPUT_VOLTAGE() * 10.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_amp_hours(false) * 10000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_amp_hours_charged(false) * 10000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_watt_hours(false) * 10000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_watt_hours_charged(false) * 10000.0), &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_MOS1), 1e1, &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_MOS2), 1e1, &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_MOS3), 1e1, &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_MOS4), 1e1, &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_MOS5), 1e1, &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_MOS6), 1e1, &ind);
+		buffer_append_float16(send_buffer, NTC_TEMP(ADC_IND_TEMP_PCB), 1e1, &ind);
+		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_motor_current(), 1e2, &ind);
+		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_input_current(), 1e2, &ind);
+		buffer_append_float16(send_buffer, mc_interface_get_duty_cycle_now(), 1e3, &ind);
+		buffer_append_float32(send_buffer, mc_interface_get_rpm(), 1e0, &ind);
+		buffer_append_float16(send_buffer, GET_INPUT_VOLTAGE(), 1e1, &ind);
+		buffer_append_float32(send_buffer, mc_interface_get_amp_hours(false), 1e4, &ind);
+		buffer_append_float32(send_buffer, mc_interface_get_amp_hours_charged(false), 1e4, &ind);
+		buffer_append_float32(send_buffer, mc_interface_get_watt_hours(false), 1e4, &ind);
+		buffer_append_float32(send_buffer, mc_interface_get_watt_hours_charged(false), 1e4, &ind);
 		buffer_append_int32(send_buffer, mc_interface_get_tachometer_value(false), &ind);
 		buffer_append_int32(send_buffer, mc_interface_get_tachometer_abs_value(false), &ind);
 		send_buffer[ind++] = mc_interface_get_fault();
+		// TODO: send FOC values id, iq, abs
 		commands_send_packet(send_buffer, ind);
 		break;
 
@@ -212,7 +216,19 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		break;
 
 	case COMM_SET_DETECT:
-		mcpwm_set_detect();
+		mcconf = *mc_interface_get_configuration();
+
+		ind = 0;
+		display_position_mode = data[ind++];
+
+		if (mcconf.motor_type == MOTOR_TYPE_BLDC) {
+			if (display_position_mode == DISP_POS_MODE_NONE) {
+				mc_interface_release_motor();
+			} else if (display_position_mode == DISP_POS_MODE_INDUCTANCE) {
+				mcpwm_set_detect();
+			}
+		}
+
 		timeout_reset();
 		break;
 
@@ -296,6 +312,9 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		mcconf.foc_sl_openloop_time = buffer_get_float32(data, 1e3, &ind);
 		mcconf.foc_sl_d_current_duty = buffer_get_float32(data, 1e3, &ind);
 		mcconf.foc_sl_d_current_factor = buffer_get_float32(data, 1e3, &ind);
+		memcpy(mcconf.foc_hall_table, data + ind, 8);
+		ind += 8;
+		mcconf.foc_hall_sl_erpm = (float)buffer_get_int32(data, &ind) / 1000.0;
 
 		mcconf.s_pid_kp = (float)buffer_get_int32(data, &ind) / 1000000.0;
 		mcconf.s_pid_ki = (float)buffer_get_int32(data, &ind) / 1000000.0;
@@ -400,6 +419,9 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		buffer_append_float32(send_buffer, mcconf.foc_sl_openloop_time, 1e3, &ind);
 		buffer_append_float32(send_buffer, mcconf.foc_sl_d_current_duty, 1e3, &ind);
 		buffer_append_float32(send_buffer, mcconf.foc_sl_d_current_factor, 1e3, &ind);
+		memcpy(send_buffer + ind, mcconf.foc_hall_table, 8);
+		ind += 8;
+		buffer_append_int32(send_buffer, (int32_t)(mcconf.foc_hall_sl_erpm * 1000.0), &ind);
 
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.s_pid_kp * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.s_pid_ki * 1000000.0), &ind);
@@ -576,9 +598,6 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		mcconf = *mc_interface_get_configuration();
 		mcconf_old = mcconf;
 
-		ind = 0;
-		send_buffer[ind++] = COMM_DETECT_MOTOR_R_L;
-
 		mcconf.motor_type = MOTOR_TYPE_FOC;
 		mc_interface_set_configuration(&mcconf);
 
@@ -592,6 +611,8 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 			l = 0.0;
 		}
 
+		ind = 0;
+		send_buffer[ind++] = COMM_DETECT_MOTOR_R_L;
 		buffer_append_float32(send_buffer, r, 1e6, &ind);
 		buffer_append_float32(send_buffer, l, 1e3, &ind);
 		commands_send_packet(send_buffer, ind);
@@ -615,6 +636,70 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		ind = 0;
 		send_buffer[ind++] = COMM_DETECT_MOTOR_FLUX_LINKAGE;
 		buffer_append_float32(send_buffer, linkage, 1e7, &ind);
+		commands_send_packet(send_buffer, ind);
+	}
+	break;
+
+	case COMM_DETECT_ENCODER: {
+#if ENCODER_ENABLE
+		mcconf = *mc_interface_get_configuration();
+		mcconf_old = mcconf;
+
+		ind = 0;
+		float current = buffer_get_float32(data, 1e3, &ind);
+
+		mcconf.motor_type = MOTOR_TYPE_FOC;
+		mcconf.foc_f_sw = 10000.0;
+		mcconf.foc_current_kp = 0.01;
+		mcconf.foc_current_ki = 10.0;
+		mc_interface_set_configuration(&mcconf);
+
+		float offset = 0.0;
+		float ratio = 0.0;
+		bool inverted = false;
+		mcpwm_foc_encoder_detect(current, false, &offset, &ratio, &inverted);
+		mc_interface_set_configuration(&mcconf_old);
+
+		ind = 0;
+		send_buffer[ind++] = COMM_DETECT_ENCODER;
+		buffer_append_float32(send_buffer, offset, 1e6, &ind);
+		buffer_append_float32(send_buffer, ratio, 1e6, &ind);
+		send_buffer[ind++] = inverted;
+		commands_send_packet(send_buffer, ind);
+#else
+		ind = 0;
+		send_buffer[ind++] = COMM_DETECT_ENCODER;
+		buffer_append_float32(send_buffer, 1001.0, 1e6, &ind);
+		buffer_append_float32(send_buffer, 0.0, 1e6, &ind);
+		send_buffer[ind++] = false;
+		commands_send_packet(send_buffer, ind);
+#endif
+	}
+	break;
+
+	case COMM_DETECT_HALL_FOC: {
+		mcconf = *mc_interface_get_configuration();
+		mcconf_old = mcconf;
+
+		ind = 0;
+		float current = buffer_get_float32(data, 1e3, &ind);
+
+		mcconf.motor_type = MOTOR_TYPE_FOC;
+		mcconf.foc_f_sw = 10000.0;
+		mcconf.foc_current_kp = 0.01;
+		mcconf.foc_current_ki = 10.0;
+		mc_interface_set_configuration(&mcconf);
+
+		uint8_t hall_tab[8];
+		bool res = mcpwm_foc_hall_detect(current, hall_tab);
+		mc_interface_set_configuration(&mcconf_old);
+
+		ind = 0;
+		send_buffer[ind++] = COMM_DETECT_HALL_FOC;
+		memcpy(send_buffer + ind, hall_tab, 8);
+		ind += 8;
+		send_buffer[ind++] = res ? 0 : 1;
+
 		commands_send_packet(send_buffer, ind);
 	}
 	break;
@@ -656,6 +741,24 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		comm_can_send_buffer(data[0], data + 1, len - 1, false);
 		break;
 
+	case COMM_SET_CHUCK_DATA:
+		ind = 0;
+		chuck_d_tmp.js_x = data[ind++];
+		chuck_d_tmp.js_y = data[ind++];
+		chuck_d_tmp.bt_c = data[ind++];
+		chuck_d_tmp.bt_z = data[ind++];
+		chuck_d_tmp.acc_x = buffer_get_int16(data, &ind);
+		chuck_d_tmp.acc_y = buffer_get_int16(data, &ind);
+		chuck_d_tmp.acc_z = buffer_get_int16(data, &ind);
+		app_nunchuk_update_output(&chuck_d_tmp);
+		break;
+
+	case COMM_CUSTOM_APP_DATA:
+		if (appdata_func) {
+			appdata_func(data, len);
+		}
+		break;
+
 	default:
 		break;
 	}
@@ -671,7 +774,7 @@ void commands_printf(char* format, ...) {
 	len = vsnprintf(print_buffer+1, 254, format, arg);
 	va_end (arg);
 
-	if(len>0) {
+	if(len > 0) {
 		commands_send_packet((unsigned char*)print_buffer, (len<254)? len+1: 255);
 	}
 }
@@ -714,6 +817,24 @@ void commands_send_experiment_samples(float *samples, int len) {
 	}
 
 	commands_send_packet(buffer, index);
+}
+
+disp_pos_mode commands_get_disp_pos_mode(void) {
+	return display_position_mode;
+}
+
+void commands_set_app_data_handler(void(*func)(unsigned char *data, unsigned int len)) {
+	appdata_func = func;
+}
+
+void commands_send_app_data(unsigned char *data, unsigned int len) {
+	int32_t index = 0;
+
+	send_buffer[index++] = COMM_CUSTOM_APP_DATA;
+	memcpy(send_buffer, data, len);
+	index += len;
+
+	commands_send_packet(send_buffer, index);
 }
 
 static THD_FUNCTION(detect_thread, arg) {

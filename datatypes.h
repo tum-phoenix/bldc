@@ -56,7 +56,8 @@ typedef enum {
 
 typedef enum {
 	FOC_SENSOR_MODE_SENSORLESS = 0,
-	FOC_SENSOR_MODE_ENCODER
+	FOC_SENSOR_MODE_ENCODER,
+	FOC_SENSOR_MODE_HALL
 } mc_foc_sensor_mode;
 
 typedef enum {
@@ -83,6 +84,15 @@ typedef enum {
 	CONTROL_MODE_POS,
 	CONTROL_MODE_NONE
 } mc_control_mode;
+
+typedef enum {
+	DISP_POS_MODE_NONE = 0,
+	DISP_POS_MODE_INDUCTANCE,
+	DISP_POS_MODE_OBSERVER,
+	DISP_POS_MODE_ENCODER,
+	DISP_POS_MODE_ENCODER_POS_ERROR,
+	DISP_POS_MODE_ENCODER_OBSERVER_ERROR
+} disp_pos_mode;
 
 typedef struct {
 	float cycle_int_limit;
@@ -160,6 +170,8 @@ typedef struct {
 	float foc_sl_d_current_duty;
 	float foc_sl_d_current_factor;
 	mc_foc_sensor_mode foc_sensor_mode;
+	uint8_t foc_hall_table[8];
+	float foc_hall_sl_erpm;
 	// Speed PID
 	float s_pid_kp;
 	float s_pid_ki;
@@ -325,12 +337,16 @@ typedef enum {
 	COMM_DETECT_MOTOR_PARAM,
 	COMM_DETECT_MOTOR_R_L,
 	COMM_DETECT_MOTOR_FLUX_LINKAGE,
+	COMM_DETECT_ENCODER,
+	COMM_DETECT_HALL_FOC,
 	COMM_REBOOT,
 	COMM_ALIVE,
 	COMM_GET_DECODED_PPM,
 	COMM_GET_DECODED_ADC,
 	COMM_GET_DECODED_CHUK,
-	COMM_FORWARD_CAN
+	COMM_FORWARD_CAN,
+	COMM_SET_CHUCK_DATA,
+	COMM_CUSTOM_APP_DATA
 } COMM_PACKET_ID;
 
 // CAN commands
@@ -406,7 +422,11 @@ typedef struct {
 typedef enum {
 	MOTE_PACKET_BATT_LEVEL = 0,
 	MOTE_PACKET_BUTTONS,
-	MOTE_PACKET_ALIVE
+	MOTE_PACKET_ALIVE,
+	MOTE_PACKET_FILL_RX_BUFFER,
+	MOTE_PACKET_FILL_RX_BUFFER_LONG,
+	MOTE_PACKET_PROCESS_RX_BUFFER,
+	MOTE_PACKET_PROCESS_SHORT_BUFFER,
 } MOTE_PACKET;
 
 typedef struct {

@@ -115,8 +115,6 @@ static THD_FUNCTION(periodic_thread, arg) {
 
 	chRegSetThreadName("Main periodic");
 
-	int fault_print = 0;
-
 	for(;;) {
 		if (mc_interface_get_state() == MC_STATE_RUNNING) {
 			ledpwm_set_intensity(LED_GREEN, 1.0);
@@ -126,12 +124,6 @@ static THD_FUNCTION(periodic_thread, arg) {
 
 		mc_fault_code fault = mc_interface_get_fault();
 		if (fault != FAULT_CODE_NONE) {
-			if (!fault_print && AUTO_PRINT_FAULTS) {
-				fault_print = 1;
-				commands_printf("%s\n", mc_interface_fault_to_string(
-						mc_interface_get_fault()));
-			}
-
 			for (int i = 0;i < (int)fault;i++) {
 				ledpwm_set_intensity(LED_RED, 1.0);
 				chThdSleepMilliseconds(250);
@@ -142,18 +134,41 @@ static THD_FUNCTION(periodic_thread, arg) {
 			chThdSleepMilliseconds(500);
 		} else {
 			ledpwm_set_intensity(LED_RED, 0.0);
-			fault_print = 0;
 		}
 
 		if (mc_interface_get_state() == MC_STATE_DETECTING) {
 			commands_send_rotor_pos(mcpwm_get_detect_pos());
 		}
 
-#if ENCODER_ENABLE
-//		commands_send_rotor_pos(utils_angle_difference(mcpwm_foc_get_phase_observer(), mcpwm_foc_get_phase_encoder()));
-//		commands_send_rotor_pos(encoder_read_deg());
-//		comm_can_set_pos(0, encoder_read_deg());
-#endif
+		disp_pos_mode display_mode = commands_get_disp_pos_mode();
+
+		switch (display_mode) {
+			case DISP_POS_MODE_ENCODER:
+				commands_send_rotor_pos(encoder_read_deg());
+				break;
+
+			case DISP_POS_MODE_ENCODER_POS_ERROR:
+				commands_send_rotor_pos(utils_angle_difference(mc_interface_get_pos_set(), encoder_read_deg()));
+				break;
+
+			default:
+				break;
+		}
+
+		if (mc_interface_get_configuration()->motor_type == MOTOR_TYPE_FOC) {
+			switch (display_mode) {
+			case DISP_POS_MODE_OBSERVER:
+				commands_send_rotor_pos(mcpwm_foc_get_phase_observer());
+				break;
+
+			case DISP_POS_MODE_ENCODER_OBSERVER_ERROR:
+				commands_send_rotor_pos(utils_angle_difference(mcpwm_foc_get_phase_observer(), mcpwm_foc_get_phase_encoder()));
+				break;
+
+			default:
+				break;
+		}
+		}
 
 		chThdSleepMilliseconds(10);
 	}
@@ -341,6 +356,10 @@ int main(void) {
 	chThdCreateStatic(timer_thread_wa, sizeof(timer_thread_wa), NORMALPRIO, timer_thread, NULL);
 
 	for(;;) {
-		chThdSleepMilliseconds(5000);
+		chThdSleepMilliseconds(10);
+
+#if ENCODER_ENABLE
+//		comm_can_set_pos(0, encoder_read_deg());
+#endif
 	}
 }

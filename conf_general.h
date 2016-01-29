@@ -27,14 +27,13 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR	2
-#define FW_VERSION_MINOR	4
+#define FW_VERSION_MINOR	10
 
 #include "datatypes.h"
 
 /*
  * Settings
  */
-#define AUTO_PRINT_FAULTS		0
 #define SYSTEM_CORE_CLOCK		168000000
 
 // Settings and parameters to override
