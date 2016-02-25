@@ -52,7 +52,7 @@
 #define MCCONF_L_MIN_VOLTAGE			6.0		// Minimum input voltage
 #endif
 #ifndef MCCONF_L_MAX_VOLTAGE
-#define MCCONF_L_MAX_VOLTAGE			50.0	// Maximum input voltage
+#define MCCONF_L_MAX_VOLTAGE			57.0	// Maximum input voltage
 #endif
 #ifndef MCCONF_L_BATTERY_CUT_START
 #define MCCONF_L_BATTERY_CUT_START		10.0	// Start limiting the positive current at this voltage
@@ -120,6 +120,9 @@
 #endif
 #ifndef MCCONF_P_PID_KD
 #define MCCONF_P_PID_KD					0.0004	// Derivative gain
+#endif
+#ifndef MCCONF_P_PID_ANG_DIV
+#define MCCONF_P_PID_ANG_DIV			1.0		// Divide angle by this value
 #endif
 
 // Current control parameters
@@ -199,7 +202,7 @@
 #define MCCONF_FOC_F_SW					20000.0
 #endif
 #ifndef MCCONF_FOC_DT_US
-#define MCCONF_FOC_DT_US				0.15 // Microseconds for dead time compensation
+#define MCCONF_FOC_DT_US				0.08 // Microseconds for dead time compensation
 #endif
 #ifndef MCCONF_FOC_ENCODER_INVERTED
 #define MCCONF_FOC_ENCODER_INVERTED		false
@@ -217,7 +220,7 @@
 #define MCCONF_FOC_PLL_KP				2000.0
 #endif
 #ifndef MCCONF_FOC_PLL_KI
-#define MCCONF_FOC_PLL_KI				40000.0
+#define MCCONF_FOC_PLL_KI				20000.0
 #endif
 #ifndef MCCONF_FOC_MOTOR_L
 #define MCCONF_FOC_MOTOR_L				0.000007

@@ -25,7 +25,7 @@
 #include "commands.h"
 #include "ch.h"
 #include "hal.h"
-#include "main.h"
+#include "mc_interface.h"
 #include "stm32f4xx_conf.h"
 #include "servo.h"
 #include "servo_simple.h"
@@ -324,11 +324,12 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		mcconf.p_pid_kp = (float)buffer_get_int32(data, &ind) / 1000000.0;
 		mcconf.p_pid_ki = (float)buffer_get_int32(data, &ind) / 1000000.0;
 		mcconf.p_pid_kd = (float)buffer_get_int32(data, &ind) / 1000000.0;
+		mcconf.p_pid_ang_div = (float)buffer_get_int32(data, &ind) / 100000.0;
 
 		mcconf.cc_startup_boost_duty = (float)buffer_get_int32(data, &ind) / 1000000.0;
 		mcconf.cc_min_current = (float)buffer_get_int32(data, &ind) / 1000.0;
 		mcconf.cc_gain = (float)buffer_get_int32(data, &ind) / 1000000.0;
-		mcconf.cc_ramp_step_max = (float)buffer_get_int32(data, &ind) / 1000000.0;
+		mcconf.cc_ramp_step_max = buffer_get_float32(data, 1e5, &ind);
 
 		mcconf.m_fault_stop_time_ms = buffer_get_int32(data, &ind);
 		mcconf.m_duty_ramp_step = (float)buffer_get_float32(data, 1000000.0, &ind);
@@ -431,6 +432,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.p_pid_kp * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.p_pid_ki * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.p_pid_kd * 1000000.0), &ind);
+		buffer_append_float32(send_buffer, mcconf.p_pid_ang_div, 1e5, &ind);
 
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.cc_startup_boost_duty * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.cc_min_current * 1000.0), &ind);
@@ -499,6 +501,16 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		appconf.app_chuk_conf.multi_esc = data[ind++];
 		appconf.app_chuk_conf.tc = data[ind++];
 		appconf.app_chuk_conf.tc_max_diff = buffer_get_float32(data, 1000.0, &ind);
+
+		appconf.app_nrf_conf.speed = data[ind++];
+		appconf.app_nrf_conf.power = data[ind++];
+		appconf.app_nrf_conf.crc_type = data[ind++];
+		appconf.app_nrf_conf.retry_delay = data[ind++];
+		appconf.app_nrf_conf.retries = data[ind++];
+		appconf.app_nrf_conf.channel = data[ind++];
+		memcpy(appconf.app_nrf_conf.address, data + ind, 3);
+		ind += 3;
+		appconf.app_nrf_conf.send_crc_ack = data[ind++];
 
 		conf_general_store_app_configuration(&appconf);
 		app_set_configuration(&appconf);
@@ -569,6 +581,16 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		send_buffer[ind++] = appconf.app_chuk_conf.tc;
 		buffer_append_int32(send_buffer, (int32_t)(appconf.app_chuk_conf.tc_max_diff * 1000.0), &ind);
 
+		send_buffer[ind++] = appconf.app_nrf_conf.speed;
+		send_buffer[ind++] = appconf.app_nrf_conf.power;
+		send_buffer[ind++] = appconf.app_nrf_conf.crc_type;
+		send_buffer[ind++] = appconf.app_nrf_conf.retry_delay;
+		send_buffer[ind++] = appconf.app_nrf_conf.retries;
+		send_buffer[ind++] = appconf.app_nrf_conf.channel;
+		memcpy(send_buffer + ind, appconf.app_nrf_conf.address, 3);
+		ind += 3;
+		send_buffer[ind++] = appconf.app_nrf_conf.send_crc_ack;
+
 		commands_send_packet(send_buffer, ind);
 		break;
 
@@ -577,7 +599,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		at_start = data[ind++];
 		sample_len = buffer_get_uint16(data, &ind);
 		decimation = data[ind++];
-		main_sample_print_data(at_start, sample_len, decimation);
+		mc_interface_sample_print_data(at_start, sample_len, decimation);
 		break;
 
 	case COMM_TERMINAL_CMD:
@@ -727,6 +749,8 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		send_buffer[ind++] = COMM_GET_DECODED_ADC;
 		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_decoded_level() * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_voltage() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_decoded_level2() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_voltage2() * 1000000.0), &ind);
 		commands_send_packet(send_buffer, ind);
 		break;
 
@@ -831,7 +855,7 @@ void commands_send_app_data(unsigned char *data, unsigned int len) {
 	int32_t index = 0;
 
 	send_buffer[index++] = COMM_CUSTOM_APP_DATA;
-	memcpy(send_buffer, data, len);
+	memcpy(send_buffer + index, data, len);
 	index += len;
 
 	commands_send_packet(send_buffer, index);

@@ -118,6 +118,17 @@ void conf_general_get_default_app_configuration(app_configuration *conf) {
 	conf->app_chuk_conf.multi_esc = APPCONF_CHUK_MULTI_ESC;
 	conf->app_chuk_conf.tc = APPCONF_CHUK_TC;
 	conf->app_chuk_conf.tc_max_diff = APPCONF_CHUK_TC_MAX_DIFF;
+
+	conf->app_nrf_conf.speed = APPCONF_NRF_SPEED;
+	conf->app_nrf_conf.power = APPCONF_NRF_POWER;
+	conf->app_nrf_conf.crc_type = APPCONF_NRF_CRC;
+	conf->app_nrf_conf.retry_delay = APPCONF_NRF_RETR_DELAY;
+	conf->app_nrf_conf.retries = APPCONF_NRF_RETRIES;
+	conf->app_nrf_conf.channel = APPCONF_NRF_CHANNEL;
+	conf->app_nrf_conf.address[0] = APPCONF_NRF_ADDR_B0;
+	conf->app_nrf_conf.address[1] = APPCONF_NRF_ADDR_B1;
+	conf->app_nrf_conf.address[2] = APPCONF_NRF_ADDR_B2;
+	conf->app_nrf_conf.send_crc_ack = APPCONF_NRF_SEND_CRC_ACK;
 }
 
 /**
@@ -217,6 +228,7 @@ void conf_general_get_default_mc_configuration(mc_configuration *conf) {
 	conf->p_pid_kp = MCCONF_P_PID_KP;
 	conf->p_pid_ki = MCCONF_P_PID_KI;
 	conf->p_pid_kd = MCCONF_P_PID_KD;
+	conf->p_pid_ang_div = MCCONF_P_PID_ANG_DIV;
 
 	conf->cc_startup_boost_duty = MCCONF_CC_STARTUP_BOOST_DUTY;
 	conf->cc_min_current = MCCONF_CC_MIN_CURRENT;

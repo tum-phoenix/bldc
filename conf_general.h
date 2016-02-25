@@ -27,7 +27,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR	2
-#define FW_VERSION_MINOR	10
+#define FW_VERSION_MINOR	16
 
 #include "datatypes.h"
 
@@ -56,7 +56,7 @@
 #define HW_VERSION_46 // Also for 4.7
 //#define HW_VERSION_48
 //#define HW_VERSION_49
-//#define HW_VERSION_410 // Also for 4.11
+//#define HW_VERSION_410 // Also for 4.11 and 4.12
 //#define HW_VERSION_R2
 //#define HW_VERSION_VICTOR_R1A
 #endif
@@ -64,10 +64,7 @@
 /*
  * Select default user motor configuration
  */
-//#define MCCONF_DEFAULT_USER		"mcconf_outrunner2.h"
 //#define MCCONF_DEFAULT_USER		"mcconf_sten.h"
-//#define MCCONF_DEFAULT_USER		"mcconf_foc_erwin.h"
-//#define MCCONF_DEFAULT_USER		"mcconf_foc_scorpion.h"
 
 /*
  * Select default user app configuration
