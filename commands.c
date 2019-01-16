@@ -185,6 +185,32 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		commands_send_packet(send_buffer, ind);
 		break;
 
+	case COMM_GET_VALUES_SHORT:      // 28 byte payload -> half of COMM_GET_VALUES
+		ind = 0;
+		send_buffer[ind++] = COMM_GET_VALUES_SHORT;
+		// buffer_append_float16(send_buffer, mc_interface_temp_fet_filtered(), 1e1, &ind);
+		// buffer_append_float16(send_buffer, mc_interface_temp_motor_filtered(), 1e1, &ind);
+		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_motor_current(), 1e2, &ind);
+		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_input_current(), 1e2, &ind);
+		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_id(), 1e2, &ind);
+		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_iq(), 1e2, &ind);
+		buffer_append_float16(send_buffer, mc_interface_get_duty_cycle_now(), 1e3, &ind);
+		buffer_append_float32(send_buffer, mc_interface_get_rpm(), 1e0, &ind);
+		buffer_append_float16(send_buffer, GET_INPUT_VOLTAGE(), 1e1, &ind);
+		// buffer_append_float32(send_buffer, mc_interface_get_amp_hours(false), 1e4, &ind);
+		// buffer_append_float32(send_buffer, mc_interface_get_amp_hours_charged(false), 1e4, &ind);
+		// buffer_append_float32(send_buffer, mc_interface_get_watt_hours(false), 1e4, &ind);
+		// buffer_append_float32(send_buffer, mc_interface_get_watt_hours_charged(false), 1e4, &ind);
+		// buffer_append_int32(send_buffer, mc_interface_get_tachometer_value(false), &ind);
+		// buffer_append_int32(send_buffer, mc_interface_get_tachometer_abs_value(false), &ind);
+		// send_buffer[ind++] = mc_interface_get_fault();
+		// buffer_append_float32(send_buffer, mc_interface_get_pid_pos_now(), 1e6, &ind);
+		// send_buffer[ind++] = app_get_configuration()->controller_id;
+
+		buffer_append_int32(buffer, (int32_t)(rotor_pos * 100000.0), &index);
+		commands_send_packet(send_buffer, ind);
+		break;
+
 	case COMM_SET_DUTY:
 		ind = 0;
 		mc_interface_set_duty((float)buffer_get_int32(data, &ind) / 100000.0);
