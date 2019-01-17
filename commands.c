@@ -162,6 +162,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		break;
 
 	case COMM_GET_VALUES:
+		// COMM_GET_VALUES = 4
 		ind = 0;
 		send_buffer[ind++] = COMM_GET_VALUES;
 		buffer_append_float16(send_buffer, mc_interface_temp_fet_filtered(), 1e1, &ind);
@@ -186,6 +187,8 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		break;
 
 	case COMM_GET_VALUES_SHORT:      // 28 byte payload -> half of COMM_GET_VALUES
+		// this message is custom made for pheonix robotics
+		// COMM_GET_VALUES_SHORT = 38
 		ind = 0;
 		send_buffer[ind++] = COMM_GET_VALUES_SHORT;
 		// buffer_append_float16(send_buffer, mc_interface_temp_fet_filtered(), 1e1, &ind);
