@@ -20,8 +20,17 @@
 #ifndef HW_MINI4_H_
 #define HW_MINI4_H_
 
-#define HW_NAME					"MINI4"
+#define HW_NAME					"MINI4_IW"
 
+
+/*
+ * ATTENTION!!
+ * 
+ * this file does NOT contain the original MINI4 hardware config. 
+ * this is modified for the Phoenix specific version!
+ * 
+ * ATTENTION!!
+ */
 // HW properties
 #define HW_HAS_DRV8301
 #define HW_HAS_3_SHUNTS
@@ -86,16 +95,16 @@
 #define V_REG					3.3
 #endif
 #ifndef VIN_R1
-#define VIN_R1					39000.0
+#define VIN_R1					10000.0
 #endif
 #ifndef VIN_R2
-#define VIN_R2					2200.0
+#define VIN_R2					1000.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		60.0
+#define CURRENT_AMP_GAIN		20.0  // changed from original 60.0
 #endif
 #ifndef CURRENT_SHUNT_RES
-#define CURRENT_SHUNT_RES		0.0005
+#define CURRENT_SHUNT_RES		0.002 // changed from original 0.0005
 #endif
 
 // Input voltage
@@ -103,10 +112,10 @@
 
 // NTC Termistors
 #define NTC_RES(adc_val)		((4095.0 * 10000.0) / adc_val - 10000.0)
-#define NTC_TEMP(adc_ind)		(1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3380.0) + (1.0 / 298.15)) - 273.15)
+#define NTC_TEMP(adc_ind)		0 // (1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3380.0) + (1.0 / 298.15)) - 273.15)
 
 #define NTC_RES_MOTOR(adc_val)	(10000.0 / ((4095.0 / (float)adc_val) - 1.0)) // Motor temp sensor on low side
-#define NTC_TEMP_MOTOR(beta)	(1.0 / ((logf(NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) / 10000.0) / beta) + (1.0 / 298.15)) - 273.15)
+#define NTC_TEMP_MOTOR(beta)	0 // (1.0 / ((logf(NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) / 10000.0) / beta) + (1.0 / 298.15)) - 273.15)
 
 // Voltage on ADC channel
 #define ADC_VOLTS(ch)			((float)ADC_Value[ch] / 4096.0 * V_REG)
@@ -124,7 +133,7 @@
 #endif
 
 // Number of servo outputs
-#define HW_SERVO_NUM			2
+#define HW_SERVO_NUM			0
 
 // UART Peripheral
 #define HW_UART_DEV				UARTD3
@@ -224,10 +233,10 @@
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-60.0, 60.0
-#define HW_LIM_CURRENT_IN		-60.0,60.0
-#define HW_LIM_CURRENT_ABS		0.0, 62.5
-#define HW_LIM_VIN				5.5, 57.0
+#define HW_LIM_CURRENT			-40.0, 40.0
+#define HW_LIM_CURRENT_IN		-40.0,40.0
+#define HW_LIM_CURRENT_ABS		0.0, 42.5
+#define HW_LIM_VIN				5.5, 33.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.99
