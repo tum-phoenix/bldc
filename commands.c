@@ -433,6 +433,30 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		commands_send_packet(send_buffer, ind);
 		break;
 
+	case COMM_SET_CUSTOM_MC_CONF_VALUES:
+		mcconf = *mc_interface_get_configuration();
+
+		ind = 0;
+		mcconf.l_current_max = buffer_get_float32_auto(data, &ind);
+
+		mcconf.lo_current_max = mcconf.l_current_max;
+		mcconf.lo_current_motor_max_now = mcconf.l_current_max;
+
+		// Apply limits if they are defined
+#ifndef DISABLE_HW_LIMITS
+#ifdef HW_LIM_CURRENT
+		utils_truncate_number(&mcconf.l_current_max, HW_LIM_CURRENT);
+		utils_truncate_number(&mcconf.l_current_min, HW_LIM_CURRENT);
+#endif
+#endif
+
+		conf_general_store_mc_configuration(&mcconf);
+		mc_interface_set_configuration(&mcconf);
+		chThdSleepMilliseconds(200);
+
+		timeout_reset();
+		break;
+
 	case COMM_GET_MCCONF:
 	case COMM_GET_MCCONF_DEFAULT:
 		if (packet_id == COMM_GET_MCCONF) {

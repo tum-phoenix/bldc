@@ -495,7 +495,8 @@ typedef enum {
 	COMM_SET_CHUCK_DATA,
 	COMM_CUSTOM_APP_DATA,
 	COMM_NRF_START_PAIRING,
-	COMM_GET_VALUES_SHORT      // this message is custom made for pheonix robotics
+	COMM_GET_VALUES_SHORT,      		// this message is custom made for pheonix robotics
+	COMM_SET_CUSTOM_MC_CONF_VALUES      // this message is custom made for pheonix robotics
 } COMM_PACKET_ID;
 
 // CAN commands
