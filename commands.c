@@ -210,7 +210,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		// buffer_append_float32(send_buffer, mc_interface_get_pid_pos_now(), 1e6, &ind);
 		// send_buffer[ind++] = app_get_configuration()->controller_id;
 
-		buffer_append_int32(buffer, (int32_t)(rotor_pos * 100000.0), &index);
+		buffer_append_int32(send_buffer, (int32_t)(encoder_read_deg() * 100000.0), &index);
 		commands_send_packet(send_buffer, ind);
 		break;
 
