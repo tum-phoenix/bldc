@@ -195,8 +195,8 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		// buffer_append_float16(send_buffer, mc_interface_temp_motor_filtered(), 1e1, &ind);
 		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_motor_current(), 1e2, &ind);
 		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_input_current(), 1e2, &ind);
-		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_id(), 1e2, &ind);
-		buffer_append_float32(send_buffer, mc_interface_read_reset_avg_iq(), 1e2, &ind);
+		// buffer_append_float32(send_buffer, mc_interface_read_reset_avg_id(), 1e2, &ind);
+		// buffer_append_float32(send_buffer, mc_interface_read_reset_avg_iq(), 1e2, &ind);
 		buffer_append_float16(send_buffer, mc_interface_get_duty_cycle_now(), 1e3, &ind);
 		buffer_append_float32(send_buffer, mc_interface_get_rpm(), 1e0, &ind);
 		buffer_append_float16(send_buffer, GET_INPUT_VOLTAGE(), 1e1, &ind);
@@ -210,7 +210,6 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		// buffer_append_float32(send_buffer, mc_interface_get_pid_pos_now(), 1e6, &ind);
 		// send_buffer[ind++] = app_get_configuration()->controller_id;
 
-		buffer_append_int32(send_buffer, (int32_t)(encoder_read_deg() * 100000.0), &index);
 		commands_send_packet(send_buffer, ind);
 		break;
 
@@ -437,9 +436,22 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		mcconf = *mc_interface_get_configuration();
 
 		ind = 0;
-		mcconf.l_current_max = buffer_get_float32_auto(data, &ind);
 
-		mcconf.lo_current_max = mcconf.l_current_max;
+        float l_current_min = buffer_get_float32_auto(data, &ind);
+        if (l_current_min != 0) mcconf.l_current_min = l_current_min;
+
+        float l_current_max = buffer_get_float32_auto(data, &ind);
+        if (l_current_max != 0) mcconf.l_current_max = l_current_max;
+
+        float l_min_erpm = buffer_get_float32_auto(data, &ind);
+        if (l_min_erpm != 0) mcconf.l_min_erpm = l_min_erpm;
+
+        float l_max_erpm = buffer_get_float32_auto(data, &ind);
+        if (l_max_erpm != 0) mcconf.l_max_erpm = l_max_erpm;
+
+        mcconf.lo_current_min = mcconf.l_current_min;
+        mcconf.lo_current_max = mcconf.l_current_max;
+        mcconf.lo_current_motor_min_now = mcconf.l_current_min;
 		mcconf.lo_current_motor_max_now = mcconf.l_current_max;
 
 		// Apply limits if they are defined
@@ -447,6 +459,10 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 #ifdef HW_LIM_CURRENT
 		utils_truncate_number(&mcconf.l_current_max, HW_LIM_CURRENT);
 		utils_truncate_number(&mcconf.l_current_min, HW_LIM_CURRENT);
+#endif
+#ifdef HW_LIM_ERPM
+		utils_truncate_number(&mcconf.l_max_erpm, HW_LIM_ERPM);
+		utils_truncate_number(&mcconf.l_min_erpm, HW_LIM_ERPM);
 #endif
 #endif
 
@@ -576,6 +592,22 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 
 		commands_send_packet(send_buffer, ind);
 		break;
+
+    case COMM_GET_CUSTOM_MC_CONF_VALUES:
+        mcconf = *mc_interface_get_configuration();
+
+        ind = 0;
+
+        send_buffer[ind++] = COMM_GET_CUSTOM_MC_CONF_VALUES;
+
+        buffer_append_float32_auto(send_buffer, mcconf.l_current_min, &ind);
+        buffer_append_float32_auto(send_buffer, mcconf.l_current_max, &ind);
+
+        buffer_append_float32_auto(send_buffer, mcconf.l_min_erpm, &ind);
+        buffer_append_float32_auto(send_buffer, mcconf.l_max_erpm, &ind);
+
+        commands_send_packet(send_buffer, ind);
+        break;
 
 	case COMM_SET_APPCONF:
 		appconf = *app_get_configuration();
