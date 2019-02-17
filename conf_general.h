@@ -55,7 +55,7 @@
 	!defined(HW_VERSION_60) && !defined(HW_VERSION_R2) && !defined(HW_VERSION_VICTOR_R1A) && \
 	!defined(HW_VERSION_DAS_RS) && !defined(HW_VERSION_PALTA) && !defined(HW_VERSION_RH) && \
 	!defined(HW_VERSION_TP) && !defined(HW_VERSION_75_300) && !defined(HW_VERSION_MINI4) && \
-	!defined(HW_VERSION_DAS_MINI)
+	!defined(HW_VERSION_DAS_MINI) && !defined(HW_VERSION_INWHEEL)
 //#define HW_VERSION_40
 //#define HW_VERSION_45
 //#define HW_VERSION_46 // Also for 4.7
@@ -70,7 +70,8 @@
 //#define HW_VERSION_RH
 //#define HW_VERSION_TP
 //#define HW_VERSION_75_300
-#define HW_VERSION_MINI4
+//#define HW_VERSION_MINI4
+#define HW_VERSION_INWHEEL
 //#define HW_VERSION_DAS_MINI
 #endif
 
@@ -81,6 +82,7 @@
 //#define MCCONF_DEFAULT_USER			"mcconf_sp_540kv.h"
 //#define MCCONF_DEFAULT_USER			"mcconf_castle_2028.h"
 //#define MCCONF_DEFAULT_USER			"mcconf_ellwee.h"
+#define MCCONF_DEFAULT_USER			"mcconf_phoenix_inwheel.h"
 
 /*
  * Select default user app configuration
@@ -88,6 +90,7 @@
 //#define APPCONF_DEFAULT_USER		"appconf_example_ppm.h"
 //#define APPCONF_DEFAULT_USER		"appconf_custom.h"
 //#define APPCONF_DEFAULT_USER		"appconf_ellwee.h"
+#define APPCONF_DEFAULT_USER		"appconf_phoenix_inwheel.h"
 
 /*
  * Set APP_CUSTOM_TO_USE to the name of the main C file of the custom application.
